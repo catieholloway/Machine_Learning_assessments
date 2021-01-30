@@ -1,0 +1,221 @@
+import pandas as pd
+bank = pd.read_csv('https://raw.githubusercontent.com/byui-cse/cse450-course/master/data/bank.csv')
+bank
+#Loading Libraries
+import matplotlib.pyplot as plt
+from sklearn import tree
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+from imblearn.under_sampling import RandomUnderSampler
+from imblearn.over_sampling import RandomOverSampler
+#Setup oversampler/undersampler
+#overSample = RandomOverSampler()
+# over or under sampling helps balance the tree data
+overSample = RandomUnderSampler()
+#Removed features: 'default', 'emp.var.rate', and 'euribor3m'
+features = ['age','job','marital','housing','loan','education', 'default']
+X = pd.get_dummies(bank[features], drop_first = True) #Get dummies converts categorical variables into dummy variables to use for analysis
+y = bank['y']
+overX, overY = overSample.fit_resample(X,y)
+#Splitting training/test data by 0.7 and 0.3
+X_train, X_test, y_train, y_test = train_test_split(overX, overY, test_size=0.3, random_state=1)
+#Creating the Decision tree classifier
+clf = DecisionTreeClassifier(max_depth=5, min_samples_leaf=1) #Added max depth to shrink tree
+#Fitting the Training Data to the Tree
+clf = clf.fit(X_train, y_train)
+#Testing data, giving score of how well it fits
+clf.score(X_test, y_test)
+
+#Plotting tree
+#tree.plot_tree(clf)
+fig, ax = plt.subplots(figsize=(20, 20))
+tree.plot_tree(clf, fontsize=10, feature_names=X.columns)
+plt.show()
+#Tree overfitted and takes forever to load, pruning tree model through max_samples and min_samples_leaf
+
+#Proof of balanced Tree
+
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import plot_confusion_matrix
+from sklearn.neighbors import KNeighborsClassifier
+
+neigh = KNeighborsClassifier(n_neighbors=3)
+neigh.fit(X_train, y_train)
+test_prediction = neigh.predict(X_test)
+confusion_matrix(y_test, test_prediction)
+plot_confusion_matrix(neigh, X_test, y_test, cmap = "Blues")
+
+import seaborn as sns
+g = sns.FacetGrid(bank, col="housing", hue="y")
+g.map(sns.scatterplot, "age", "education", alpha=.7)
+g.add_legend()
+
+sns.set_theme(style="whitegrid")
+# term_deposit = sns.load_dataset("tips")
+ax = sns.barplot(x="y", y="age", data=bank)
+
+from vega_datasets import data
+import altair as alt
+
+sub = bank[(bank.poutcome == "success") | (bank.poutcome == 'failure')].sample(n = 5000)
+
+base = alt.Chart(sub).encode(
+    x='month',
+    y='campaign',
+    color='poutcome'
+)
+
+base.mark_bar()
+
+base2 = alt.Chart(sub).encode(
+    x='month',
+    y='campaign',
+    color='poutcome'
+)
+
+base2.mark_bar()
+
+alt.hconcat(base.mark_bar(),base2.mark_bar())
+
+months = ["apr", "aug", "dec", "jul", "jun", "mar", "may", "nov", "oct", "sep"]
+monthAverages = []
+x = 0
+while x < len(months):
+  yes = sub[(sub["y"] == "yes") & (sub["month"] == months[x])]
+  no = sub[(sub["y"] == "no") & (sub["month"] == months[x])]
+  monthAverages.append(yes["month"].count() / (yes["month"].count() + no["month"].count()))
+  x += 1
+i = 0
+while i < len(monthAverages):
+  print("Month: ", months[i], " Success Percentage: {:.0%}".format(monthAverages[i]))
+  i += 1
+  
+  import seaborn as sns
+g = sns.FacetGrid(bank, col="contact", hue="poutcome")
+g.map(sns.scatterplot, "day_of_week", "previous", alpha=.7)
+g.add_legend()
+
+sns.lmplot(x="campaign", y="previous", hue="poutcome", data=bank);
+
+campaign = pd.read_csv('https://raw.githubusercontent.com/byui-cse/cse450-course/master/data/bank.csv')
+
+subscribed = campaign[campaign['y'] == 'yes']
+
+clients = subscribed[['age', 'job', 'marital', 'education', 'default', 'housing', 'loan', 'contact', 'month', 'day_of_week', 'campaign', 'pdays', 'previous', 'poutcome']]
+
+import altair as alt
+
+alt.Chart(clients).mark_bar().encode(
+    x='age',
+    y='count(age)'
+)
+
+import pandas as pd
+import seaborn as sns
+
+campaign = pd.read_csv('https://raw.githubusercontent.com/byui-cse/cse450-course/master/data/bank.csv')
+
+clients = campaign[['age', 'job', 'marital', 'education', 'default', 'housing', 'loan', 'contact', 'month', 'day_of_week', 'campaign', 'pdays', 'previous', 'poutcome', 'cons.conf.idx']]
+
+ax = sns.barplot(x="cons.conf.idx", y="month", data=clients)
+
+import numpy as np
+
+bank['cons.conf.dif'] = np.where(bank['cons.conf.idx'] >= bank['cons.conf.idx'].mean(), 'h', 'l')
+bank['cons.conf.dif'].value_counts()
+
+highConfidences = bank[bank['cons.conf.dif'] == 'h']
+highConfidences
+
+#Setup oversampler/undersampler
+#overSample = RandomOverSampler()
+# over or under sampling helps balance the tree data
+overSample = RandomUnderSampler()
+# Removed features: 'default', 'emp.var.rate', and 'euribor3m'
+features = ['emp.var.rate', 'cons.price.idx', 'euribor3m', 'nr.employed', 'cons.conf.idx']
+X = pd.get_dummies(highConfidences[features], drop_first = True) #Get dummies converts categorical variables into dummy variables to use for analysis
+# y = highConfidences[']
+y = highConfidences['y']
+overX, overY = overSample.fit_resample(X,y)
+
+#Splitting training/test data by 0.7 and 0.3
+X_train, X_test, y_train, y_test = train_test_split(overX, overY, test_size=0.3, random_state=1)
+
+import numpy as np
+from sklearn import preprocessing
+#Creating the Decision tree classifier
+clf = DecisionTreeClassifier(max_depth=5, min_samples_leaf=1) #Added max depth to shrink tree
+#Fitting the Training Data to the Tree
+lab_enc = preprocessing.LabelEncoder()
+training_scores_encoded = lab_enc.fit_transform(y_train)
+
+clf = clf.fit(X_train, y_train)
+#Testing data, giving score of how well it fits
+clf.score(X_test, y_test)
+
+#Plotting tree
+#tree.plot_tree(clf)
+fig, ax = plt.subplots(figsize=(20, 20))
+tree.plot_tree(clf, fontsize=10, feature_names=X.columns)
+plt.show()
+#Tree overfitted and takes forever to load, pruning tree model through max_samples and min_samples_leaf
+
+#Proof of balanced Tree
+
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import plot_confusion_matrix
+from sklearn.neighbors import KNeighborsClassifier
+
+neigh = KNeighborsClassifier(n_neighbors=3)
+neigh.fit(X_train, y_train)
+test_prediction = neigh.predict(X_test)
+confusion_matrix(y_test, test_prediction)
+plot_confusion_matrix(neigh, X_test, y_test, cmap = "Blues")
+
+lowConfidences = bank[bank['cons.conf.dif'] == 'l']
+lowConfidences
+
+#Setup oversampler/undersampler
+#overSample = RandomOverSampler()
+# over or under sampling helps balance the tree data
+overSample = RandomUnderSampler()
+# Removed features: 'default', 'emp.var.rate', and 'euribor3m'
+features = ['emp.var.rate', 'cons.price.idx', 'euribor3m', 'nr.employed', 'cons.conf.idx']
+X = pd.get_dummies(lowConfidences[features], drop_first = True) #Get dummies converts categorical variables into dummy variables to use for analysis
+y = lowConfidences['y']
+overX, overY = overSample.fit_resample(X,y)
+#Splitting training/test data by 0.7 and 0.3
+X_train, X_test, y_train, y_test = train_test_split(overX, overY, test_size=0.3, random_state=1)
+
+import numpy as np                       
+from sklearn import preprocessing
+
+#Creating the Decision tree classifier
+clf = DecisionTreeClassifier(max_depth=5, min_samples_leaf=1) #Added max depth to shrink tree
+#Fitting the Training Data to the Tree
+lab_enc = preprocessing.LabelEncoder()
+training_scores_encoded = lab_enc.fit_transform(y_train)
+
+clf = clf.fit(X_train, y_train)
+#Testing data, giving score of how well it fits
+clf.score(X_test, y_test)
+
+#Plotting tree
+#tree.plot_tree(clf)
+fig, ax = plt.subplots(figsize=(20, 20))
+tree.plot_tree(clf, fontsize=10, feature_names=X.columns)
+plt.show()
+#Tree overfitted and takes forever to load, pruning tree model through max_samples and min_samples_leaf
+
+#Proof of balanced Tree
+
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import plot_confusion_matrix
+from sklearn.neighbors import KNeighborsClassifier
+
+neigh = KNeighborsClassifier(n_neighbors=3)
+neigh.fit(X_train, y_train)
+test_prediction = neigh.predict(X_test)
+confusion_matrix(y_test, test_prediction)
+plot_confusion_matrix(neigh, X_test, y_test, cmap = "Blues")
