@@ -1,0 +1,110 @@
+import pandas as pd
+
+housing = pd.read_csv('https://raw.githubusercontent.com/byui-cse/cse450-course/master/data/housing.csv')
+
+from scipy import stats
+z_housing = housing
+z_housing["sqft_lot"] = stats.zscore(housing["sqft_lot"])
+z_housing["sqft_living"] = stats.zscore(housing["sqft_living"])
+z_housing["sqft_above"] = stats.zscore(housing["sqft_above"])
+z_housing["sqft_basement"] = stats.zscore(housing["sqft_basement"])
+z_housing["sqft_lot15"] = stats.zscore(housing["sqft_lot15"])
+z_housing["sqft_living15"] = stats.zscore(housing["sqft_living15"])
+z_housing["waterfront"] = stats.zscore(housing["waterfront"])
+z_housing["view"] = stats.zscore(housing["view"])
+
+z_housing.head()
+
+avgHomes = z_housing[(z_housing["price"] < 2500000) & (housing["price"] > 100000)]
+X = avgHomes[[ "bedrooms", "sqft_lot", "sqft_living",  "waterfront", "condition", "grade", "long", "lat",  "sqft_above", "view"]]
+X.head()
+
+y = avgHomes["price"]
+y.head()
+
+from sklearn.neighbors import KNeighborsRegressor
+import numpy as np
+from xgboost import XGBRegressor
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test  = train_test_split(X, y, test_size=0.2, random_state=42)
+model = XGBRegressor()
+model.fit(X_train, y_train)
+
+# Use the predict() method to get a list of predictions for the samples in our 
+# test data. Then output those predictions
+# from sklearn.neighbors import predict
+y_prediction= model.predict(X_test) #initial predictions without knowing the end result stored in y_test
+y_prediction
+
+# Just a quick comparison with y_test to see if they match up
+y_test.head() #y_test stores the final values
+
+# Import the accuracy_score function and use it to determine
+# how accurate the models predictions were for our test data
+from sklearn import model_selection
+import numpy as np
+from sklearn.metrics import mean_squared_error
+result = mean_squared_error(y_test, y_prediction, squared=False)
+result
+#lowest: $118,681.71363511033
+
+housing["mean"] = 289100
+housing["value"] = housing["price"] - housing["mean"]
+housing
+
+wash = pd.read_csv("https://raw.githubusercontent.com/catieholloway/Washington_Counties/main/washington_counties.csv")
+wash = wash[['zipcode','county']]
+wash
+
+combo = pd.merge(wash, housing)
+combo
+
+combo['county'].nunique() #24 counties
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+from seaborn import FacetGrid
+import matplotlib
+
+
+#Facet Wrap
+#g = sns.FacetGrid(combo, row="county")
+#g.map_dataframe(sns.histplot, x="value")
+
+g = sns.barplot(x="county",
+ y="value",
+ data=combo)
+for item in g.get_xticklabels():
+    item.set_rotation(90)
+plt.title("Mean Value Sold in Washington House Market")
+plt.xlabel("Counties")
+plt.ylabel("Mean Values (Millions)")
+
+#https://s3.amazonaws.com/assets.datacamp.com/blog_assets/Python_Seaborn_Cheat_Sheet.pdf
+
+g = sns.barplot(x="county",
+ y="value", hue = "condition",
+ data=combo)
+for item in g.get_xticklabels():
+    item.set_rotation(90)
+plt.title("Mean Value Sold in Washington House Market")
+plt.xlabel("Counties")
+plt.ylabel("Mean Values (Millions)")
+
+#By Bedroom
+
+g = sns.FacetGrid(combo, col="bedrooms")
+g.map_dataframe(sns.histplot, x="county",y="value")
+plt.title("Mean Value Sold in Washington House Market")
+plt.xlabel("Counties")
+plt.ylabel("Mean Values (Millions)")
+
+#By Condition
+
+g = sns.FacetGrid(combo, col="condition")
+g.map_dataframe(sns.histplot, x="county",y="value")
+g.set_xticklabels(rotation=90)
+plt.title("Mean Value Sold in Washington House Market")
+plt.xlabel("Counties")
+plt.ylabel("Mean Values (Millions)")
