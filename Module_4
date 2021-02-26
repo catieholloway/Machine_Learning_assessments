@@ -1,0 +1,228 @@
+import pandas as pd
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+import numpy as np
+from tensorflow.keras.layers.experimental import preprocessing
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+
+# Make numpy printouts easier to read.
+np.set_printoptions(precision=3, suppress=True)
+
+
+bikes = pd.read_csv('https://raw.githubusercontent.com/byui-cse/cse450-course/master/data/bikes.csv')
+bikes.head()
+
+
+random = pd.DataFrame(bikes.dteday.str.split('/',3).tolist(), 
+                         columns = ['month','day','year'])
+bikes2 = pd.concat([random, bikes],axis=1)
+
+del bikes2['dteday']
+bikes2['users'] = bikes2['casual'] + bikes2['registered']
+bikes2.month = pd.to_numeric(bikes2.month)
+bikes2.day = pd.to_numeric(bikes2.day)
+bikes2.year = pd.to_numeric(bikes2.year)
+# df.drop(columns=['B', 'C'])
+bikes2 = bikes2.drop(columns = ['casual', 'registered'])
+bikes2
+
+
+import datetime
+from datetime import date
+
+# day_name()
+bikes2['day_of_week'] = pd.to_datetime(bikes['dteday']).dt.dayofweek
+bikes2.head()
+
+from sklearn.model_selection import train_test_split
+
+train_features = bikes2.copy()
+y = train_features.pop('users')
+X = train_features
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+
+bikes2.describe().transpose()[['mean', 'std']]
+
+tf.keras.layers.experimental.preprocessing.Normalization(
+    axis=-1, dtype=None, mean=None, variance=None
+)
+
+normalizer = tf.keras.layers.experimental.preprocessing.Normalization()
+
+normalizer.adapt(np.array(X_train))
+print(normalizer.mean.numpy())
+
+def build_and_compile_model(norm):
+  model = keras.Sequential([
+      norm,
+      layers.Dense(64, activation='relu'),
+      layers.Dense(64, activation='relu'),
+      layers.Dense(1)
+  ])
+
+  model.compile(loss='mean_absolute_error',
+                optimizer=tf.keras.optimizers.Adam(0.001))
+  return model
+  
+dnn_model = build_and_compile_model(normalizer)
+dnn_model.summary()
+
+history = dnn_model.fit(
+    X_train, y_train,
+    validation_split=0.2, epochs=120)
+
+def plot_loss(history):
+  plt.plot(history.history['loss'], label='loss')
+  plt.plot(history.history['val_loss'], label='val_loss')
+  # plt.ylim([0, 10])
+  plt.xlabel('Epoch')
+  plt.ylabel('Error [Rentals]')
+  plt.legend()
+  plt.grid(True)
+
+plot_loss(history)
+
+sns.scatterplot(data = bikes2, x = "temp_c", y = "feels_like_c", hue = "users")
+plt.title("Bike Users by Temperature")
+plt.xlabel("Temp (Celcius)")
+plt.ylabel("Feels-like Temp (Celcius)")
+
+sns.catplot(
+    data=bikes2, kind="bar",
+    x="workingday", y="users", hue="holiday",
+    ci=None, palette="Paired", alpha=.6, height=6
+)
+plt.title("Users per Working Days and Holidays")
+plt.xlabel("If Working Day or Not")
+plt.ylabel("Number of Users")
+
+sns.catplot(
+    data=bikes2, kind="bar",
+    x="workingday", y="users", hue="weathersit",
+    ci=None, palette="Paired", alpha=.6, height=6
+)
+plt.title("Users per Working Days and Holidays")
+plt.xlabel("If Working Day or Not")
+plt.ylabel("Number of Users")
+
+sns.catplot(
+    data=bikes2, kind="bar",
+    x="hr", y="users", hue="weathersit",
+    ci=None, palette="Paired"
+)
+plt.title("Users per Hour in Weather Situations")
+plt.xlabel("Hour of Day")
+plt.ylabel("Number of Users")
+
+sns.catplot(
+    data=bikes2, kind="point",
+    x="hr", y="users",
+    ci="sd", palette="Paired"
+)
+plt.title("Users per Hour")
+plt.xlabel("Hour")
+plt.ylabel("Number of Users")
+
+sns.barplot(
+    data=bikes2,
+    x="month", y="users", palette="mako"
+)
+plt.title("Users per Month")
+plt.xlabel("Month")
+plt.ylabel("Number of Users")
+
+sns.barplot(
+    data=bikes2,
+    x="hr", y="users", palette="mako"
+)
+plt.title("Users per Hour")
+plt.xlabel("Hour")
+plt.ylabel("Number of Users")
+
+sns.barplot(
+    data=bikes2,
+    x="year", y="users", hue = "weathersit", palette="mako"
+)
+plt.title("Users per Year")
+plt.xlabel("Year")
+plt.ylabel("Number of Users")
+
+sns.catplot(
+    data=bikes2, kind = "violin",
+    x="season", y="users", hue = "holiday", palette="rainbow"
+)
+plt.title("Users per Year")
+plt.xlabel("Season")
+plt.ylabel("Number of Users")
+
+sns.barplot(
+    data=bikes2,
+    x="windspeed", y="users", palette="rainbow"
+)
+plt.title("Users vs windspeed")
+plt.xlabel("Windspeed")
+plt.ylabel("Number of Users")
+
+sns.scatterplot(data = bikes2, x = "hum", y = "temp_c", hue = "users")
+plt.title("Bike Users by Humidity")
+plt.xlabel("Humidity")
+plt.ylabel("Temp (Celcius)")
+
+import matplotlib as mpl
+sns.set_theme(style="ticks")
+
+
+f, ax = plt.subplots(figsize=(7, 5))
+sns.despine(f)
+
+sns.histplot(
+    bikes2,
+    x="temp_c", hue="holiday",
+    multiple="stack",
+    palette="light:m_r",
+    edgecolor=".3",
+    linewidth=.5,
+    log_scale=True,
+)
+ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
+#ax.set_xticks([-10, 10, 15, 20, 25, 30, 35])
+
+import seaborn as sns
+sns.set_theme(style="white")
+
+# Load the example mpg dataset
+#mpg = sns.load_dataset("mpg")
+
+# Plot miles per gallon against horsepower with other semantics
+sns.relplot(x="temp_c", y="users", hue="weathersit", #size="holiday",
+            sizes=(40, 100), alpha=.5, palette="bright",
+            height=6, data=bikes2)
+            
+import seaborn as sns
+sns.set_theme(style="white")
+
+# Load the example mpg dataset
+#mpg = sns.load_dataset("mpg")
+
+# Plot miles per gallon against horsepower with other semantics
+sns.relplot(x="windspeed", y="users", hue="season", #size="holiday",
+            sizes=(40, 100), alpha=.5, palette="bright",
+            height=6, data=bikes2)
+            
+import seaborn as sns
+sns.set_theme(style="darkgrid")
+
+# Load an example dataset with long-form data
+#fmri = sns.load_dataset("fmri")
+
+# Plot the responses for different events and regions
+sns.lineplot(x="temp_c", y="users",
+             hue="season", style="season",
+             data=bikes2)
